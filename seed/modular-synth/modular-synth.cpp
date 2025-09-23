@@ -68,11 +68,11 @@ Voice voices[N_VOICES];
 int   voice_index = 0;
 
 // --- Buttons and LEDs ---
-// Pode trocar os pinos se quiser, mas cada botão corresponde à sua onda
-Switch buttonSaw;   // controla sawOn
-Switch buttonPulse; // controla pulseOn
-GPIO   ledSaw;      // mostra estado de sawOn
-GPIO   ledPulse;    // mostra estado de pulseOn
+// Invertidos: cada botão/LED agora controla a onda oposta
+Switch buttonSaw;   // agora controla pulseOn (invertido)
+Switch buttonPulse; // agora controla sawOn (invertido)
+GPIO   ledSaw;      // agora mostra estado de pulseOn (invertido)
+GPIO   ledPulse;    // agora mostra estado de sawOn (invertido)
 
 // --- Audio callback ---
 void AudioCallback(AudioHandle::InputBuffer  in,
@@ -156,10 +156,10 @@ int main(void)
     midi.StartReceive();
 
     // Init buttons (with debounce) and LEDs
-    buttonSaw.Init(seed::D12, 50);   // botão que liga/desliga sawOn
-    buttonPulse.Init(seed::D13, 50); // botão que liga/desliga pulseOn
-    ledSaw.Init(seed::D15, GPIO::Mode::OUTPUT);
-    ledPulse.Init(seed::D16, GPIO::Mode::OUTPUT);
+    buttonSaw.Init(seed::D12, 50);   // botão que liga/desliga sawOn (invertido)
+    buttonPulse.Init(seed::D13, 50); // botão que liga/desliga pulseOn (invertido)
+    ledSaw.Init(seed::D15, GPIO::Mode::OUTPUT);   // LED saw (invertido)
+    ledPulse.Init(seed::D16, GPIO::Mode::OUTPUT); // LED pulse (invertido)
 
     hw.StartAudio(AudioCallback);
 
@@ -175,14 +175,14 @@ int main(void)
         buttonPulse.Debounce();
 
         if(buttonSaw.RisingEdge())
-            sawOn = !sawOn;
+            pulseOn = !pulseOn;  // botão saw agora controla pulse (invertido)
 
         if(buttonPulse.RisingEdge())
-            pulseOn = !pulseOn;
+            sawOn = !sawOn;      // botão pulse agora controla saw (invertido)
 
-        // LEDs mostram exatamente o estado de cada onda
-        ledSaw.Write(sawOn);
-        ledPulse.Write(pulseOn);
+        // LEDs mostram o estado das ondas (invertidos)
+        ledSaw.Write(pulseOn);   // LED saw mostra estado do pulse
+        ledPulse.Write(sawOn);   // LED pulse mostra estado do saw
 
         System::Delay(1);
     }
