@@ -20,6 +20,9 @@ float subVolume = 0.8f;
 // Noise volume
 float noiseVolume = 0.0f;
 
+Svf   vcf;
+float cutOffFrequency;
+float resonance;
 // One voice = 2 Oscillators + Amp Envelope
 struct Voice
 {
@@ -114,6 +117,9 @@ void AudioCallback(AudioHandle::InputBuffer  in,
     // Lê o knob de subVolume (ADC canal 0) com mapeamento exponencial
     subVolume   = fmap(hw.adc.GetFloat(0), 0.0f, 1.0f, Mapping::EXP);
     noiseVolume = fmap(hw.adc.GetFloat(1), 0.0f, 1.0f, Mapping::EXP) * 0.3f;
+    cutOffFrequency = fmap(
+        hw.adc.GetFloat(2), 20.0f, hw.AudioSampleRate() / 3, Mapping::LOG);
+    resonance = fmap(hw.adc.GetFloat(3), 0.1f, 10.5f, Mapping::EXP);
 
     for(size_t i = 0; i < size; i++)
     {
@@ -126,6 +132,12 @@ void AudioCallback(AudioHandle::InputBuffer  in,
 
         // normalize + aplica subVolume
         mix *= 0.2f;
+
+        // Aplica filtro passa-baixas
+        vcf.SetFreq(cutOffFrequency);
+        vcf.SetRes(resonance);
+        vcf.Process(mix);
+        mix = vcf.Low();
 
         out[0][i] = mix;
         out[1][i] = mix;
@@ -200,12 +212,18 @@ int main(void)
     ledSaw.Init(seed::D15, GPIO::Mode::OUTPUT);   // LED saw (invertido)
     ledPulse.Init(seed::D16, GPIO::Mode::OUTPUT); // LED pulse (invertido)
 
+    //filter
+    vcf.Init(samplerate);
+    vcf.SetFreq(1000.0f);
+    vcf.SetRes(0.7f);
 
     // Create an array of two AdcChannelConfig objects
-    const int        num_adc_channels = 2;
+    const int        num_adc_channels = 4;
     AdcChannelConfig my_adc_config[num_adc_channels];
     my_adc_config[0].InitSingle(seed::D17);
     my_adc_config[1].InitSingle(seed::D18);
+    my_adc_config[2].InitSingle(seed::D19);
+    my_adc_config[3].InitSingle(seed::D20);
     hw.adc.Init(my_adc_config, num_adc_channels);
     hw.adc.Start();
 
